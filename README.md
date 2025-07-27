@@ -36,7 +36,6 @@ These permissions must be granted to the **Enterprise Application** (Managed Ide
 | `Application.ReadWrite.All` | Application  | Required to reset (add) secrets on any app registration |
 | `Directory.Read.All`        | Application  | Optional – used to search SPNs by name |
 
-> 💡 These must be **granted admin consent** by a Global Administrator.
 
 ### Key Vault Role
 Assign the following RBAC role to the Managed Identity:
