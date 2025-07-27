@@ -48,7 +48,7 @@ az role assignment create \
   --role "Key Vault Secrets Officer" \
   --scope /subscriptions/<sub-id>/resourceGroups/<rg-name>/providers/Microsoft.KeyVault/vaults/<vault-name>
 ```
-### Assgien Permission for MSI in MS Graph
+### Add Permission for MSI in MS Graph
 ``` Powershell
 <#
 .SYNOPSIS
@@ -66,7 +66,7 @@ param (
   [string] $TenantId,
 
   [Parameter(Mandatory)]
-  [string] $ManagedIdentityName,  # Display name of the Managed Identity
+  [string] $ManagedIdentityName,  # Display name of the Managed Identity logic app
 
   [Parameter()]
   [string[]] $Permissions = @(
