@@ -1,7 +1,7 @@
 # 🔐 Keymistry - Secret Rotation for Azure App Registrations <img width="520" height="232" alt="2" src="https://github.com/user-attachments/assets/d15e68fc-b686-4443-8ffb-e685ee08d379" />
 
 
-**Keymistry** is a secure and automated Azure Logic App that rotates secrets (client passwords) for App Registrations (service principals) in Microsoft Entra ID. It stores the new password securely in Azure Key Vault and supports both scheduled and event-driven execution.
+**Keymistry** is a secure and automated Azure Logic App that rotates secrets (client passwords) for App Registrations in Microsoft Entra ID. It stores the new password securely in Azure Key Vault and supports both scheduled and event-driven execution.
 
 ---
 
@@ -18,10 +18,11 @@
 ## 📋 Prerequisites
 
 ### 🔧 Azure Resources
-- Azure Logic App (Consumption or Standard)
+- Azure Logic App Standard
 - System-assigned Managed Identity enabled on the Logic App
 - Azure Key Vault with appropriate access policies
 - An App Registration (Service Principal) in Entra ID
+- The logicapp json file is supported for statefull workflow
 
 ---
 
