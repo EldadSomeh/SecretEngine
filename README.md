@@ -59,7 +59,6 @@ az role assignment create \
   and assigns specified Graph application roles. Requires Global Administrator privileges.
 .NOTES
   - Requires Microsoft.Graph and Az modules
-  - Script mimics the TechCommunity blog post logic (Joyce_Dorothy, 2021)
 #>
 
 param (
