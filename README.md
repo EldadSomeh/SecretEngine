@@ -24,18 +24,18 @@
 - Azure Key Vault with appropriate access policies
 - An App Registration (Service Principal) in Entra ID
 - The logicapp json file is supported for statefull workflow
+- Make sure that for the 1st time you enter the secret manually or via script so the logic app can pull out the relevant info
 
 ---
 
 ## 🔐 Required Permissions
 
 ### Microsoft Graph Application Permissions
-These permissions must be granted to the **Enterprise Application** (Managed Identity) in Microsoft Entra ID:
+These permissions must be granted to the **Enterprise Application** for the MSI (Managed Identity) in Microsoft Entra ID:
 
 | Permission Name              | Type         | Purpose                            |
 |-----------------------------|--------------|------------------------------------|
-| `Application.ReadWrite.All` | Application  | Required to reset (add) secrets on any app registration |
-| `Directory.Read.All`        | Application  | Optional – used to search SPNs by name |
+| `Application.ReadWrite.All` | Application  | Required to reset (add) secrets on any app registration
 
 
 ### Key Vault Role
