@@ -1,0 +1,218 @@
+{
+    "definition": {
+        "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+        "contentVersion": "1.0.0.0",
+        "parameters": {},
+        "triggers": {
+            "When_a_HTTP_request_is_received": {
+                "type": "Request",
+                "kind": "Http",
+                "inputs": {
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "spnName": {
+                                "type": "string"
+                            },
+                            "keyVaultName": {
+                                "type": "string"
+                            },
+                            "secretName": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "spnName",
+                            "keyVaultName",
+                            "secretName"
+                        ]
+                    }
+                }
+            }
+        },
+        "actions": {
+            "Initialize_Variables": {
+                "type": "InitializeVariable",
+                "inputs": {
+                    "variables": [
+                        {
+                            "name": "SPNName",
+                            "type": "string",
+                            "value": "@triggerBody()?['spnName']"
+                        },
+                        {
+                            "name": "KeyVaultName",
+                            "type": "string",
+                            "value": "@triggerBody()?['keyVaultName']"
+                        },
+                        {
+                            "name": "SecretName",
+                            "type": "string",
+                            "value": "@triggerBody()?['secretName']"
+                        },
+                        {
+                            "name": "NewSecret",
+                            "type": "string"
+                        }
+                    ]
+                },
+                "runAfter": {}
+            },
+            "Get_SPN": {
+                "type": "Http",
+                "inputs": {
+                    "uri": "https://graph.microsoft.com/v1.0/ServicePrincipals?$filter=displayName eq '@{variables('SPNName')}'",
+                    "method": "GET",
+                    "authentication": {
+                        "type": "ManagedServiceIdentity",
+                        "audience": "https://graph.microsoft.com"
+                    }
+                },
+                "runAfter": {
+                    "Initialize_Variables": [
+                        "Succeeded"
+                    ]
+                }
+            },
+            "GenerateSPNSecretName": {
+                "type": "Compose",
+                "inputs": "@concat(variables('SPNName'), '-', substring(guid(), 0, 8))",
+                "runAfter": {
+                    "Get_SPN": [
+                        "Succeeded"
+                    ]
+                }
+            },
+            "Unlock_SPN_Credentials": {
+                "type": "Http",
+                "inputs": {
+                    "uri": "https://graph.microsoft.com/v1.0/Application(appId='@{body('Get_SPN')?['value']?[0]?['appId']}')",
+                    "method": "PATCH",
+                    "body": {
+                        "servicePrincipalLockConfiguration": {
+                            "isEnabled": false,
+                            "credentialsWithUsageSign": true,
+                            "credentialsWithUsageVerify": true
+                        }
+                    },
+                    "authentication": {
+                        "type": "ManagedServiceIdentity",
+                        "audience": "https://graph.microsoft.com"
+                    }
+                },
+                "runAfter": {
+                    "GenerateSPNSecretName": [
+                        "Succeeded"
+                    ]
+                }
+            },
+            "Post_Password_to_Entra": {
+                "type": "Http",
+                "inputs": {
+                    "uri": "https://graph.microsoft.com/v1.0/Application(appId='@{body('Get_SPN')?['value']?[0]?['appId']}')/addPassword",
+                    "method": "POST",
+                    "headers": {
+                        "Content-type": "application/json"
+                    },
+                    "body": {
+                        "passwordCredential": {
+                            "displayName": "@outputs('GenerateSPNSecretName')",
+                            "endDateTime": "@addDays(utcNow(), 30)"
+                        }
+                    },
+                    "authentication": {
+                        "type": "ManagedServiceIdentity",
+                        "audience": "https://graph.microsoft.com"
+                    }
+                },
+                "runAfter": {
+                    "Unlock_SPN_Credentials": [
+                        "Succeeded"
+                    ]
+                }
+            },
+            "Parse_Secret": {
+                "type": "ParseJson",
+                "inputs": {
+                    "content": "@body('Post_Password_to_Entra')",
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "secretText": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "secretText"
+                        ]
+                    }
+                },
+                "runAfter": {
+                    "Post_Password_to_Entra": [
+                        "Succeeded"
+                    ]
+                }
+            },
+            "Set_NewSecret": {
+                "type": "SetVariable",
+                "inputs": {
+                    "name": "NewSecret",
+                    "value": "@body('Parse_Secret')?['secretText']"
+                },
+                "runAfter": {
+                    "Parse_Secret": [
+                        "Succeeded"
+                    ]
+                }
+            },
+            "Update_KeyVault": {
+                "type": "Http",
+                "inputs": {
+                    "uri": "https://@{variables('KeyVaultName')}.vault.azure.net/secrets/@{variables('SecretName')}?api-version=7.4",
+                    "method": "PUT",
+                    "body": {
+                        "value": "@variables('NewSecret')",
+                        "attributes": {
+                            "enabled": true,
+                            "exp": "@{div(sub(ticks(addDays(utcNow(), 29)), ticks('1970-01-01T00:00:00Z')), 10000000)}"
+                        }
+                    },
+                    "authentication": {
+                        "type": "ManagedServiceIdentity",
+                        "audience": "https://vault.azure.net"
+                    }
+                },
+                "runAfter": {
+                    "Set_NewSecret": [
+                        "Succeeded"
+                    ]
+                }
+            },
+            "Lock_SPN_Credentials": {
+                "type": "Http",
+                "inputs": {
+                    "uri": "https://graph.microsoft.com/v1.0/Application(appId='@{body('Get_SPN')?['value']?[0]?['appId']}')",
+                    "method": "PATCH",
+                    "body": {
+                        "servicePrincipalLockConfiguration": {
+                            "isEnabled": true,
+                            "credentialsWithUsageSign": true,
+                            "credentialsWithUsageVerify": true
+                        }
+                    },
+                    "authentication": {
+                        "type": "ManagedServiceIdentity",
+                        "audience": "https://graph.microsoft.com"
+                    }
+                },
+                "runAfter": {
+                    "Update_KeyVault": [
+                        "Succeeded"
+                    ]
+                }
+            }
+        },
+        "outputs": {}
+    },
+    "kind": "Stateful"
+}
